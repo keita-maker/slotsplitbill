@@ -62,7 +62,7 @@ Resources:
         Type: CODEPIPELINE
       Source:
         Type: CODEPIPELINE
-        BuildSpec: buildspec.yml
+        BuildSpec: templates/buildspec.yml
           
   CodeBuildServiceRole:
     Type: AWS::IAM::Role
