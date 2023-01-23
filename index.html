@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Page Title</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        
+    </head>
+    <body>
+      <div id="main">
+        <h2>Split The Bill</h2>
+        <form>
+          <div id="info">
+              <label class="label">お会計金額</label>
+              <input type="text" maxlength="5" id="bill" oninput="value = value.replace(/[^0-9]+/i,'');" />
+              <label class="label">メンバー名</label>
+              <div id="names">
+                  <input type="text" id="name0" class="name" maxlength="4">
+                  <input type="text" id="name1" class="name" maxlength="4">
+                  <input type="text" id="name2" class="name" maxlength="4">
+              </div>
+              <div id="operation">
+                <input id="minus" type="button" value="-">
+                <input id="plus" type="button" value="+">
+                <input id="submit" type="button" value="START">
+              </div>
+          </div>
+        </form>
+      </div>
+    
+      <script type="text/javascript">
+      // スロットゲームの処理
+      // 即時関数で囲っておく（スコープを限定）
+        (function(){
+          var interval = 40; // スロットのスピード
+          var timers = []; // スロット
+          var results = []; // スロットを止めた時の数字
+          var stopCount = []; // スロットを止めたか判別に使用
+          var splitBill = []
+          var leftPrice = 0;
+          var finalPrice = 0;
+          var billDigit = 0;
+          var personNum = 3;
+          var turnNum = 0;
+          var memberName = []
+          var chart = [];
+          var tmp = {};
+          
+          var main = document.getElementById('main');
+          var info = document.getElementById('info');
+          var names = document.getElementById('names');
+          var minus = document.getElementById('minus');
+          var plus = document.getElementById('plus');
+    
+          // 左のSTOPをクリックした時スロットを止める
+          document.getElementById('submit').addEventListener('click',function(){
+              
+              for(var i = 0;i < personNum;i++){
+                 var member = document.getElementById('name' + i).value;
+                 if(member == ''){
+                   return;
+                 }
+              }
+              
+              leftPrice = document.getElementById('bill').value
+              
+              if(leftPrice == ''){
+                return;
+              }
+              finalPrice = document.getElementById('bill').value
+              if(biggestDigit(leftPrice) > 1){
+                 billDigit = String(leftPrice).length;
+              } else {
+                 billDigit = String(leftPrice).length - 1;
+              }
+              
+              for(var i = 0;i < personNum;i++){
+                 var member = document.getElementById('name' + i).value;
+                 memberName.push(member);
+              }
+              
+              shuffle(memberName);
+              
+              removeTag(info)
+              
+              DecidePay(billDigit);
+          })
+          
+          
+          function DecidePay(digit){
+            
+            
+              makeSlot(digit);
+              startSlot(digit);
+              
+              for(var i = 0; i < digit;i++){
+                  document.getElementById('stop' + i).onclick = (function(num){
+                    return function(){
+                      stopSlot(num);
+                    }
+                  })(i);
+              }
+          }
+          
+          function makeSlot(num){
+              
+              removeTag(main)
+              
+              var slotCorner = document.createElement('div');
+              slotCorner.id = "slots";
+              
+              var mark = document.createElement('div');
+              mark.className = 'mark';
+              mark.innerHTML = '¥';
+              slotCorner.appendChild(mark);
+              
+              var title = document.createElement('h2');
+              title.innerHTML = memberName[turnNum] + "'s Pay …"
+              main.appendChild(title)
+              main.appendChild(slotCorner);
+              
+              for(var i = 0; i < num;i++){
+                
+                  
+                  var slotCommon = document.createElement('div');
+                  slotCommon.className = "slot";
+                  
+                  var slotSpecified = document.createElement('div');
+                  slotSpecified.id = 'slot' + i;
+                  
+                  var slotButton = document.createElement('input');
+                  slotButton.type = "button";
+                  slotButton.className = "stop";
+                  slotButton.id = "stop" + i;
+                  
+                  slotCorner.appendChild(slotCommon);
+                  slotCommon.appendChild(slotSpecified);
+                  slotCommon.appendChild(slotButton);
+              }
+              
+              var leftTitle = document.createElement('h1');
+              leftTitle.className = "left"
+              leftTitle.innerHTML = '¥' + leftPrice + ' Left'
+              main.appendChild(leftTitle)
+      
+          }
+    
+          function startSlot(num) {
+            // 初期化（空の状態に戻す）
+            for(var i = 0;i < num;i++){
+                stopCount.push(0)
+            }
+            timers = []; // スロット
+            results = []; // スロットを止めた時の数字
+    
+        
+            // スロットを回す
+            for(var i = 0;i < num;i++){
+                runSlot(i);
+            }
+          }
+    
+          // スロットを回す処理の中身
+          function runSlot(num) {
+            
+    
+            // 全てのスロットの現在表示されているテキストを取得
+            var slotValue = document.getElementById('slot' + num);
+    
+            // 9より上の数字になったら0へ戻る
+            if(num == 0 && biggestDigit(leftPrice) > 1){
+                var BiggestDigit = Math.floor(biggestDigit(leftPrice) / 2);
+                var SmallestDigit = Math.floor(biggestDigit(leftPrice) / 4);
+                if(slotValue.textContent < BiggestDigit) {
+                  slotValue.textContent ++;
+                } else {
+                  slotValue.textContent = SmallestDigit;
+                }
+                
+            } else {
+              
+                if(slotValue.textContent < 9) {
+                  slotValue.textContent ++;
+                } else {
+                  slotValue.textContent = 0;
+                }
+            }
+    
+            // スロットの数字をカウントさせる
+            timers[num] = setTimeout(function() {
+    
+              // スロットの数字をカウントさせる処理
+              runSlot(num);
+            }, interval);
+          }
+          
+          // スロットを止める処理の中身
+          function stopSlot(num) {
+            console.log(num)
+            // スロットを止める
+            clearTimeout(timers[num]);
+    
+            // スロットを止めた際の数字を取得
+            results[num] = document.getElementById('slot' + num).textContent;
+    
+            // スロットを止めたことを記録
+            stopCount[num] = 1;
+            
+            var total = 1;
+            
+            for(var i = 0;i < billDigit;i++){
+              total = total * stopCount[i]
+              console.log(total)
+            }
+            console.log(total)
+            // 全てのスロットを止めた場合に結果を表示する
+            if (total == 1) {
+              checkResult(billDigit);
+            }
+          }
+    
+          // 全てのスロットを止めた結果
+          function checkResult(num) {
+            var slotPrice = 0;
+            console.log(results)
+            for(var i = 0;i < num;i++){
+              slotPrice = slotPrice + results[i] * (10 ** (num - i - 1));
+            }
+            
+            tmp = {name: memberName[turnNum],bill: slotPrice}
+            splitBill.push(tmp);
+            leftPrice = leftPrice - slotPrice;
+            stopCount = [];
+            results = []
+            personNum--;
+            turnNum++;
+            
+            removeTag(info);
+            
+            if(biggestDigit(leftPrice) > 1){
+               billDigit = String(leftPrice).length;
+            } else {
+               billDigit = String(leftPrice).length - 1;
+            }
+            
+            if(personNum > 1){
+              DecidePay(billDigit);
+            } else {
+              tmp = {name: memberName[turnNum],bill: leftPrice}
+              splitBill.push(tmp)
+              
+              removeTag(main)
+              var lastTitle = document.createElement('h2');
+              lastTitle.innerHTML = "Check, please !"
+              main.appendChild(lastTitle)
+              
+              var table = document.createElement('table');
+              for(var i = 0;i < turnNum + 1;i++){
+                
+                var tr = document.createElement('tr')
+                var nameSpace = document.createElement('td')
+                var billSpace = document.createElement('td')
+                
+                tr.id = 'check'
+                nameSpace.textContent = splitBill[i].name;
+                billSpace.textContent = splitBill[i].bill;
+                nameSpace.className = "namespace"
+                billSpace.className = "billspace"
+                
+                table.appendChild(tr)
+                tr.appendChild(nameSpace);
+                tr.appendChild(billSpace);
+                
+              }
+              main.appendChild(table)
+              
+              var finalBill = document.createElement('h1');
+              finalBill.className = "final"
+              finalBill.innerHTML = '¥' + finalPrice
+              main.appendChild(finalBill)
+              
+              var reloadButton = document.createElement('input');
+              reloadButton.type = "button"
+              reloadButton.id = "reload"
+              reloadButton.value = "AGAIN"
+              main.appendChild(reloadButton)
+              
+              document.getElementById('reload').addEventListener('click',function(){
+                  location.reload();
+              })
+            }
+            
+            
+          }
+          
+          function shuffle(arr) {
+              var n = arr.length;
+              var temp, i;
+          
+              while (n) {
+                  i = Math.floor(Math.random() * n--);
+                  temp = arr[n];
+                  arr[n] = arr[i];
+                  arr[i] = temp;
+              }
+              return arr;
+          }
+          
+          function removeTag(div){
+            while( div.firstChild ){
+              div.removeChild( div.firstChild );
+            }
+          }
+          
+          function biggestDigit(num){
+            return Number(String(num)[0])
+          }
+          
+          minus.onclick = function() {
+            personNum--;
+            var name = document.getElementById('name' + personNum);
+            names.removeChild(name);
+            
+            if(personNum == 2){
+              minus.disabled = true;
+              minus.style.opacity = 0.5;
+            } else if(personNum == 5) {
+              plus.disabled = false;
+              plus.style.opacity = 1.0;
+            }
+          }
+          
+          plus.onclick = function() {
+            var name = document.createElement('input')
+            name.type = "text";
+            name.setAttribute("maxlength","4")
+            name.id = "name" + personNum;
+            name.className = 'name';
+            names.appendChild(name);
+            personNum++;
+            
+            if(personNum == 6){
+              plus.disabled = true;
+              plus.style.opacity = 0.5;
+            } else if(personNum == 3) {
+              minus.disabled = false;
+              minus.style.opacity = 1.0;
+            }
+          }
+          
+          
+          
+        })();
+    
+      </script>
+    
+      <style media="screen">
+      
+        body {
+          background-color: #3cad7e;
+          margin: 0 auto;
+        }
+        
+        
+        h2 {
+          color: #fff;
+          text-transform: none;
+          text-align: center;
+          font-size: 35px;
+          font-family: 'Comic Sans MS', cursive;
+          font-weight:bold;
+        }
+        
+        table {
+          font-size: 30px;
+          border-bottom: 5px solid white;
+          margin-left: auto;
+          margin-right: auto;
+          border-spacing: 10px;
+        }
+        
+        
+        td {
+          width: 110px;
+        }
+        
+        .namespace {
+          width: 130px;
+        }
+        
+        .billspace {
+         text-align: right;
+        }
+        
+        #check {
+          color: white;
+          display: flex;
+          font-size: 30px;
+        }
+        
+        #main {
+          margin-top: 100px;
+        }
+        
+        #operation {
+          text-align: center;
+        }
+        #minus {
+          margin-right: 20px;
+          width: 25px;
+          height: 25px;
+          background-color: #CD9D71;
+          font-weight: bold;
+          color: white;
+          border-radius: 50%;
+        }
+        
+        #plus {
+          margin-left: 20px;
+          width: 25px;
+          height: 25px;
+          background-color: #CD9D71;
+          font-weight: bold;
+          color: white;
+          border-radius: 50%;
+        }
+        
+        #submit, #reload {
+          display: block;
+          margin: 20px auto 0;
+          width: 150px;
+          height: 40px;
+          background-color: #CD9D71;
+          font-weight: bold;
+          color: white;
+          font-size: 25px;
+        }
+        
+        .label {
+          font-size: 16px;
+          color: #fff;
+          transition: all 0.25s ease;
+          margin-right: 130px;
+          font-family: '筑紫B丸ゴシック', cursive;
+        }
+        
+        .stop {
+          background-color: #B18F61;
+          border-radius: 50%;
+          height: 35px;
+          width: 35px;
+        }
+        #info {
+          text-align: center;
+        }
+        
+        .slot {
+          text-align: center;
+          margin-right: 5px;
+          margin-left: 5px;
+          color: #B47A32;
+        }
+        #slots {
+          margin: 0 auto;
+          padding-right: 5px;
+          border-radius: 20%;
+          display: flex;
+          justify-content: center;
+          font-size: 60px;
+          background-color: #F0E1C2;
+          width: 290px;
+        }
+        
+        .mark {
+          font-size: 20px;
+          color: #B47A32;
+          margin-top: 45px;
+        }
+        
+        .left {
+          margin-top: 60px;
+          color: #fff;
+          text-align: center;
+          font-family: 'Comic Sans MS', cursive;
+          font-weight:bold;
+          font-size: 42px;
+        }
+        
+        .final {
+          color: #fff;
+          text-align: center;
+          margin-left: 120px;
+          margin-top: 14px;
+          font-family: 'Comic Sans MS', cursive;
+          font-weight:bold;
+          font-size: 42px;
+        }
+        
+        .name, #bill {
+          margin: 0 auto;
+          display: block;
+          width: 200px;
+          padding: 5px;
+          margin-bottom:15px;
+          margin-top: 5px;
+          border: none;
+          border-radius: 5px;
+          font-size: 16px;
+          color: #a0a0a0;
+          outline: none;
+        }
+    
+      </style>
+    </body>
+</html>

@@ -1,0 +1,292 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Network Template For Slot
+
+Parameters:
+          
+  VPCCIDR:
+    Type: String
+
+  PublicSubnet1CIDR:
+    Type: String
+
+  PublicSubnet2CIDR:
+    Type: String
+
+  ECSSubnet1CIDR:
+    Type: String
+
+  ECSSubnet2CIDR:
+    Type: String
+#InternetALB
+  ALBName:
+    Type: String
+#TargetGroupName
+  TargetGroupName:
+    Type: String
+  HostZoneId:
+    Type: String
+  DomainName:
+    Type: String
+  SubDomain:
+    Type: String
+
+Resources:
+  VPC: 
+    Type: "AWS::EC2::VPC"
+    Properties: 
+      CidrBlock: !Ref VPCCIDR
+      EnableDnsSupport: "true"
+      EnableDnsHostnames: "true"
+      InstanceTenancy: default
+      Tags: 
+        - Key: Name
+          Value: "slot-vpc"
+  InternetGateway: 
+    Type: "AWS::EC2::InternetGateway"
+    Properties: 
+      Tags: 
+        - Key: Name
+          Value: "slot-igw"
+  InternetGatewayAttachment: 
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties: 
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC 
+      
+  PublicSubnet1: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: !Ref PublicSubnet1CIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: "slot-public-subnet-1"
+  PublicSubnet2: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: !Ref PublicSubnet2CIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: "slot-public-subnet-2"
+  ECSSubnet1: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: !Ref ECSSubnet1CIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: "slot-private-subnet-1"
+  ECSSubnet2: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: !Ref ECSSubnet2CIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: "slot-private-subnet-2"
+  
+  PublicRouteTable1: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: "slot-public-route-1"
+  PublicRouteTable2: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: "slot-public-route-2"
+  ECSRouteTable1: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: "slot-ecs-route-1"
+  ECSRouteTable2: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: "slot-ecs-route-2"
+  
+  # PublicRouteA Create
+  PublicRoute1: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref PublicRouteTable1
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway 
+
+# PublicRouteC Create
+  PublicRoute2: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref PublicRouteTable2
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+  
+  ECSRoute1: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref ECSRouteTable1
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway 
+      
+  ECSRoute2: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref ECSRouteTable2
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway 
+      
+# PublicRouteTable Associate SubnetA
+  PublicSubnetARouteTableAssociation: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable1
+
+# PublicRouteTable Associate SubnetC
+  PublicSubnetCRouteTableAssociation: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable2
+
+# PrivateRouteTable Associate SubnetA
+  ECSSubnetARouteTableAssociation: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref ECSSubnet1
+      RouteTableId: !Ref ECSRouteTable1
+
+# PrivateRouteTable Associate SubnetC
+  ECSSubnetCRouteTableAssociation: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref ECSSubnet2
+      RouteTableId: !Ref ECSRouteTable2
+      
+  ELBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: for ELB
+      GroupName: ELB    
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        -
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+  ECSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: for ECS
+      GroupName: ECS   
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        -
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref ELBSecurityGroup
+      
+# setting server form here
+
+  TargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      VpcId: !Ref VPC
+      Name: !Sub "${TargetGroupName}"
+      Protocol: HTTP
+      Port: 80
+      TargetType: ip
+      
+  InternetALB:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      Name: !Sub "${ALBName}"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ALBName}"
+      Scheme: "internet-facing"
+      LoadBalancerAttributes:
+        - Key: "deletion_protection.enabled"
+          Value: false
+        - Key: "idle_timeout.timeout_seconds"
+          Value: 60
+        - Key: "access_logs.s3.enabled"
+          Value: false
+      SecurityGroups:
+        - !Ref ELBSecurityGroup
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      
+  ALBListenerHTTP: 
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties: 
+      Port: 80
+      Protocol: HTTP
+      DefaultActions: 
+        - Type: redirect
+          RedirectConfig: 
+            Host: '#{host}'
+            Path: '/#{path}'
+            Port: 443
+            Protocol: HTTPS
+            Query: '#{query}'
+            StatusCode: HTTP_301
+      LoadBalancerArn: !Ref InternetALB
+  ALBListenerHTTPS:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref ACM
+      DefaultActions:
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref InternetALB
+      
+  DnsRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Sub '${HostZoneId}'
+      Comment: "DNS for ALB"
+      Name: !Sub '${SubDomain}'
+      Type: A
+      AliasTarget:
+        HostedZoneId: !GetAtt 'InternetALB.CanonicalHostedZoneID'
+        DNSName: !GetAtt 'InternetALB.DNSName'
+  ACM:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub '${SubDomain}'
+      DomainValidationOptions:
+        - DomainName: !Sub '${SubDomain}'
+          HostedZoneId: !Sub '${HostZoneId}'
+      ValidationMethod: DNS
+      
+Outputs:
+  TargetGroup:
+    Value: !Ref TargetGroup
+  ECSSecurityGroup:
+    Value: !Ref ECSSecurityGroup
+  ECSSubnet1:
+    Value: !Ref ECSSubnet1
+  ECSSubnet2:
+    Value: !Ref ECSSubnet2
