@@ -12,10 +12,10 @@ Parameters:
   PublicSubnet2CIDR:
     Type: String
 
-  ECSSubnet1CIDR:
+  PrivateSubnet1CIDR:
     Type: String
 
-  ECSSubnet2CIDR:
+  PrivateSubnet2CIDR:
     Type: String
 #InternetALB
   ALBName:
@@ -71,24 +71,46 @@ Resources:
       Tags: 
         - Key: Name
           Value: "slot-public-subnet-2"
-  ECSSubnet1: 
+  PrivateSubnet1: 
     Type: "AWS::EC2::Subnet"
     Properties: 
       AvailabilityZone: "ap-northeast-1a"
-      CidrBlock: !Ref ECSSubnet1CIDR
+      CidrBlock: !Ref PrivateSubnet1CIDR
       VpcId: !Ref VPC 
       Tags: 
         - Key: Name
           Value: "slot-private-subnet-1"
-  ECSSubnet2: 
+  PrivateSubnet2: 
     Type: "AWS::EC2::Subnet"
     Properties: 
       AvailabilityZone: "ap-northeast-1c"
-      CidrBlock: !Ref ECSSubnet2CIDR
+      CidrBlock: !Ref PrivateSubnet2CIDR
       VpcId: !Ref VPC 
       Tags: 
         - Key: Name
           Value: "slot-private-subnet-2"
+          
+  NatGateway1EIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGateway2EIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+
+  NatGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway2EIP.AllocationId
+      SubnetId: !Ref PublicSubnet2
   
   PublicRouteTable1: 
     Type: "AWS::EC2::RouteTable"
@@ -104,20 +126,20 @@ Resources:
       Tags: 
         - Key: Name
           Value: "slot-public-route-2"
-  ECSRouteTable1: 
+  PrivateRouteTable1: 
     Type: "AWS::EC2::RouteTable"
     Properties: 
       VpcId: !Ref VPC 
       Tags: 
         - Key: Name
-          Value: "slot-ecs-route-1"
-  ECSRouteTable2: 
+          Value: "slot-private-route-1"
+  PrivateRouteTable2: 
     Type: "AWS::EC2::RouteTable"
     Properties: 
       VpcId: !Ref VPC 
       Tags: 
         - Key: Name
-          Value: "slot-ecs-route-2"
+          Value: "slot-private-route-2"
   
   # PublicRouteA Create
   PublicRoute1: 
@@ -133,21 +155,21 @@ Resources:
     Properties: 
       RouteTableId: !Ref PublicRouteTable2
       DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref InternetGateway
+      GatewayId: !Ref InternetGateway 
   
-  ECSRoute1: 
+  PrivateRoute1: 
     Type: "AWS::EC2::Route"
     Properties: 
-      RouteTableId: !Ref ECSRouteTable1
+      RouteTableId: !Ref PrivateRouteTable1
       DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref InternetGateway 
+      NatGatewayId: !Ref NatGateway1
       
-  ECSRoute2: 
+  PrivateRoute2: 
     Type: "AWS::EC2::Route"
     Properties: 
-      RouteTableId: !Ref ECSRouteTable2
+      RouteTableId: !Ref PrivateRouteTable2
       DestinationCidrBlock: "0.0.0.0/0"
-      GatewayId: !Ref InternetGateway 
+      NatGatewayId: !Ref NatGateway1 
       
 # PublicRouteTable Associate SubnetA
   PublicSubnetARouteTableAssociation: 
@@ -164,18 +186,18 @@ Resources:
       RouteTableId: !Ref PublicRouteTable2
 
 # PrivateRouteTable Associate SubnetA
-  ECSSubnetARouteTableAssociation: 
+  PrivateSubnetARouteTableAssociation: 
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     Properties: 
-      SubnetId: !Ref ECSSubnet1
-      RouteTableId: !Ref ECSRouteTable1
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable1
 
 # PrivateRouteTable Associate SubnetC
-  ECSSubnetCRouteTableAssociation: 
+  PrivateSubnetCRouteTableAssociation: 
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     Properties: 
-      SubnetId: !Ref ECSSubnet2
-      RouteTableId: !Ref ECSRouteTable2
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable2
       
   ELBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -286,7 +308,7 @@ Outputs:
     Value: !Ref TargetGroup
   ECSSecurityGroup:
     Value: !Ref ECSSecurityGroup
-  ECSSubnet1:
-    Value: !Ref ECSSubnet1
-  ECSSubnet2:
-    Value: !Ref ECSSubnet2
+  PrivateSubnet1:
+    Value: !Ref PrivateSubnet1
+  PrivateSubnet2:
+    Value: !Ref PrivateSubnet2

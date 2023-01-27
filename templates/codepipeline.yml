@@ -173,7 +173,6 @@ Resources:
                 ConnectionArn: !Ref GithubConnectionArn
                 BranchName: !Ref Branch
                 OutputArtifactFormat: CODEBUILD_CLONE_REF
-                DetectChanges: "true"
               RunOrder: 1
         - Name: Build
           Actions:

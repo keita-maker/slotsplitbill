@@ -9,8 +9,8 @@ Metadata:
           - VPCCIDR
           - PublicSubnet1CIDR
           - PublicSubnet2CIDR
-          - ECSSubnet1CIDR
-          - ECSSubnet2CIDR
+          - PrivateSubnet1CIDR
+          - PrivateSubnet2CIDR
       - Label:
           default: "InternetALB"
         Parameters:
@@ -52,11 +52,11 @@ Parameters:
     Type: String
     Default: "10.1.2.0/24"
 
-  ECSSubnet1CIDR:
+  PrivateSubnet1CIDR:
     Type: String
     Default: "10.1.1.0/24"
 
-  ECSSubnet2CIDR:
+  PrivateSubnet2CIDR:
     Type: String
     Default: "10.1.3.0/24"
 #InternetALB
@@ -164,8 +164,8 @@ Resources:
         VPCCIDR: !Ref VPCCIDR
         PublicSubnet1CIDR: !Ref PublicSubnet1CIDR
         PublicSubnet2CIDR: !Ref PublicSubnet2CIDR
-        ECSSubnet1CIDR: !Ref ECSSubnet1CIDR
-        ECSSubnet2CIDR: !Ref ECSSubnet2CIDR
+        PrivateSubnet1CIDR: !Ref PrivateSubnet1CIDR
+        PrivateSubnet2CIDR: !Ref PrivateSubnet2CIDR
         ALBName: !Ref ALBName
         TargetGroupName: !Ref TargetGroupName
         HostZoneId: !Ref HostZoneId
@@ -191,5 +191,5 @@ Resources:
         TaskMaxContainerCount: !Ref TaskMaxContainerCount
         TargetGroup: !GetAtt NETWORK.Outputs.TargetGroup
         ECSSecurityGroup: !GetAtt NETWORK.Outputs.ECSSecurityGroup
-        ECSSubnet1: !GetAtt NETWORK.Outputs.ECSSubnet1
-        ECSSubnet2: !GetAtt NETWORK.Outputs.ECSSubnet2
+        PrivateSubnet1: !GetAtt NETWORK.Outputs.PrivateSubnet1
+        PrivateSubnet2: !GetAtt NETWORK.Outputs.PrivateSubnet2

@@ -40,10 +40,10 @@ Parameters:
   ECSSecurityGroup:
     Type: String
     
-  ECSSubnet1:
+  PrivateSubnet1:
     Type: String
     
-  ECSSubnet2:
+  PrivateSubnet2:
     Type: String
 
 # Scaling params
@@ -137,8 +137,8 @@ Resources:
            SecurityGroups:
              - !Ref ECSSecurityGroup
            Subnets:
-             - !Ref ECSSubnet1
-             - !Ref ECSSubnet2
+             - !Ref PrivateSubnet1
+             - !Ref PrivateSubnet2
       ServiceName: !Sub "${ServiceName}"
       TaskDefinition: !Ref ECSTaskDefinition
   
